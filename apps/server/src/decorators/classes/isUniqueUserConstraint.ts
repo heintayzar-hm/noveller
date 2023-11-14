@@ -1,0 +1,31 @@
+import { Injectable } from "@nestjs/common"
+import { ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface } from "class-validator"
+import { EntityManager } from "typeorm"
+import { IsUniqueInterface } from "../isUnique.decorator"
+
+@ValidatorConstraint({name: 'IsUniqueConstraint', async: true})
+@Injectable()
+export class IsUniqueUserConstraint implements ValidatorConstraintInterface {
+    constructor(private readonly entityManager: EntityManager) {}
+    async validate(
+        value: any,
+        args?: ValidationArguments
+        ): Promise<boolean> {
+            // catch options from decorator
+            const {tableName, column}: IsUniqueInterface = args?.constraints[0]
+
+            // database query check data is exists
+            const dataExist = await this.entityManager.getRepository(tableName)
+                .createQueryBuilder(tableName)
+                .where({[column]: value, isVerified: true})
+                .getExists()
+
+            return !dataExist
+    }
+
+    defaultMessage(validationArguments?: ValidationArguments): string {
+        // return custom field message
+        const field: string | undefined = validationArguments?.property
+        return `${field} already exists`
+    }
+}
